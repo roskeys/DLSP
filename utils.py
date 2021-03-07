@@ -15,7 +15,7 @@ from torchvision import transforms
 
 
 class Lung_Dataset(Dataset):
-    def __init__(self, groups, transform=0, contrast=1, brightness=1):
+    def __init__(self, groups, base_dir="dataset", transform=0, contrast=1, brightness=1):
         """
         Constructor for generic Dataset class - simply assembles
         the important parameters in attributes.
@@ -29,9 +29,9 @@ class Lung_Dataset(Dataset):
 
         # Path to images for different parts of the dataset
         self.dataset_paths = {
-            'normal': f'./dataset/{groups}/normal/',
-            'non-covid': f'./dataset/{groups}/infected/non-covid/',
-            'covid': f'./dataset/{groups}/infected/covid/'
+            'normal': f'./{base_dir}/{groups}/normal/',
+            'non-covid': f'./{base_dir}/{groups}/infected/non-covid/',
+            'covid': f'./{base_dir}/{groups}/infected/covid/'
         }
         # Number of images in each part of the dataset
         self.dataset_numbers = {
