@@ -15,7 +15,7 @@ from torchvision import transforms
 
 
 class Lung_Dataset(Dataset):
-    def __init__(self, groups):
+    def __init__(self, groups, transform = 0, contrast = 1, brightness = 1):
         """
         Constructor for generic Dataset class - simply assembles
         the important parameters in attributes.
@@ -24,7 +24,7 @@ class Lung_Dataset(Dataset):
         self.groups = groups
         # All images are of size 150 x 150
         self.img_size = (150, 150)
-        # Only two classes will be considered here (normal and infected)
+        # 3 classes will be considered here (normal and infected)
         self.classes = {'normal': 0, 'non-covid': 1, 'covid': 2}
 
         # Path to images for different parts of the dataset
@@ -39,6 +39,27 @@ class Lung_Dataset(Dataset):
             'non-covid': len(listdir(self.dataset_paths['non-covid'])),
             'covid': len(listdir(self.dataset_paths['covid'])),
         }
+        # Define Data Augmentation
+        self.transform = int(transform)
+        self.contrast = max(0, min(contrast, 2))
+        self.brightness = max(0, min(brightness, 2))
+
+    def _transform(self, im):
+        """
+        self.transforms is the indicator of what transform to apply.
+        1 = horizontal flip
+        2 = contrast change
+        4 = brightness change
+        """
+        if self.transform <= 7 and self.transform >= 1:
+            if self.transform & 1:
+                im = transforms.RandomHorizontalFlip()(im)
+            if self.transform & 2:
+                im = transforms.ColorJitter(contrast = self.contrast)(im)
+            if self.transform & 4:
+                im.transform.ColorJitter(brightness = self.brightness)(im)
+        return im
+
 
     def describe(self):
         """
@@ -138,6 +159,7 @@ class Lung_Dataset(Dataset):
         else:
             raise ValueError("Index larger than the max index")
         im = self.open_img(class_val, index)
+        im = self._transform(im)
         im = transforms.functional.to_tensor(np.array(im)).float()
         return im, label
 
