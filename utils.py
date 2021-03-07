@@ -15,7 +15,7 @@ from torchvision import transforms
 
 
 class Lung_Dataset(Dataset):
-    def __init__(self, groups, transform = None, contrast = 1, brightness = 1):
+    def __init__(self, groups, transform = 0, contrast = 1, brightness = 1):
         """
         Constructor for generic Dataset class - simply assembles
         the important parameters in attributes.
