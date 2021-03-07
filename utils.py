@@ -15,7 +15,7 @@ from torchvision import transforms
 
 
 class Lung_Dataset(Dataset):
-    def __init__(self, groups, transform = 0, contrast = 1, brightness = 1):
+    def __init__(self, groups, transform=0, contrast=1, brightness=1):
         """
         Constructor for generic Dataset class - simply assembles
         the important parameters in attributes.
@@ -55,11 +55,10 @@ class Lung_Dataset(Dataset):
             if self.transform & 1:
                 im = transforms.RandomHorizontalFlip()(im)
             if self.transform & 2:
-                im = transforms.ColorJitter(contrast = self.contrast)(im)
+                im = transforms.ColorJitter(contrast=self.contrast)(im)
             if self.transform & 4:
-                im.transform.ColorJitter(brightness = self.brightness)(im)
+                im.transform.ColorJitter(brightness=self.brightness)(im)
         return im
-
 
     def describe(self):
         """
