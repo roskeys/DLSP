@@ -57,7 +57,7 @@ class Lung_Dataset(Dataset):
             msg += " - {}, in folder {}: {} images.\n".format(key, val, self.dataset_numbers[key])
         print(msg)
 
-    def open_img(self,  class_val, index_val):
+    def open_img(self, class_val, index_val):
         """
         Opens image with specified parameters.
         Parameters:
@@ -142,4 +142,38 @@ class Lung_Dataset(Dataset):
         return im, label
 
 
+def dataset_distribution(*datasets):
+    labels = [dataset.groups for dataset in datasets]
+    normal = [dataset.dataset_numbers['normal'] for dataset in datasets]
+    non_covid = [dataset.dataset_numbers['non-covid'] for dataset in datasets]
+    covid = [dataset.dataset_numbers['covid'] for dataset in datasets]
+    x = np.arange(len(labels))
+    width = 0.3
 
+    fig, ax = plt.subplots()
+    ax.bar(x - width, normal, width=width, label='normal')
+    ax.bar(x, non_covid, width=width, label='non-covid')
+    ax.bar(x + width, covid, width=width, label='covid')
+    ax.set_ylabel("Number")
+    ax.set_title("Number of data for each class")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
+
+    def add_tag(nums, shift):
+        for index, num in enumerate(nums):
+            plt.text(index + shift, num + 0.05, num, ha='center', fontsize=11)
+
+    add_tag(normal, -width)
+    add_tag(non_covid, 0)
+    add_tag(covid, width)
+
+    fig.tight_layout()
+    plt.show()
+
+
+if __name__ == '__main__':
+    train_set = Lung_Dataset("train")
+    test_set = Lung_Dataset("test")
+    val_set = Lung_Dataset("val")
+    dataset_distribution(train_set, test_set, val_set)
