@@ -1,17 +1,94 @@
 from os import listdir
-# Matplotlib
 import matplotlib.pyplot as plt
-# Numpy
 import numpy as np
-# Pillow
 from PIL import Image
-# Torch
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torchvision import transforms
+
+
+class AugmentedDataset(Dataset):
+    def __init__(self, *datasets):
+        """
+        Constructor for augmented Dataset class
+        """
+        # All images are of size 150 x 150
+        self.img_size = (150, 150)
+        self.dataset_numbers = {
+            f"{dataset.groups}_{dataset.transform}_{dataset.contrast}_{dataset.brightness}": len(dataset)
+            for dataset in datasets
+        }
+        self.classes = {
+            f"{dataset.groups}_{dataset.transform}_{dataset.contrast}_{dataset.brightness}": dataset
+            for dataset in datasets
+        }
+
+    def describe(self):
+        """
+        Descriptor function.
+        Will print details about the dataset when called.
+        """
+        # Generate description
+        msg = "This is the augmented dataset of the Lung Dataset"
+        msg += " used for the Small Project Demo in the 50.039 Deep Learning class"
+        msg += " in Feb-March 2021. \n"
+        msg += "It contains a total of {} images, ".format(sum(self.dataset_numbers.values()))
+        msg += "of size {} by {}.\n".format(self.img_size[0], self.img_size[1])
+        msg += "The images are stored in the following locations "
+        msg += "and each one contains the following number of images:\n"
+        print(msg)
+
+    def open_img(self, group_val, transform_val, contrast_val, brightness_val, index_val):
+        """
+        Opens image with specified parameters.
+        Parameters:
+        - class_val variable should be set to 'normal', non-covid or 'covid'.
+        - index_val should be an integer with values between 0 and the maximal number of images in dataset.
+        Returns loaded image as a normalized Numpy array.
+        """
+        dataset_name = f"{group_val}_{transform_val}_{contrast_val}_{brightness_val}"
+        dataset = self.classes[dataset_name]
+        assert index_val < self.dataset_numbers[dataset_name]
+        return dataset[index_val][0]
+
+    def show_img(self, group_val, transform_val, contrast_val, brightness_val, index_val):
+        """
+        Opens, then displays image with specified parameters.
+
+        Parameters:
+        - group_val should take values in 'train', 'test' or 'val'.
+        - class_val variable should be set to 'normal', 'non-covid' or 'covid'
+        - index_val should be an integer with values between 0 and the maximal number of images in dataset.
+        """
+        # Open image
+        im = self.open_img(group_val, transform_val, contrast_val, brightness_val, index_val)
+        # Display
+        plt.imshow(im.permute(1, 2, 0))
+
+    def __len__(self):
+        """
+        Length special method, returns the number of images in dataset.
+        """
+
+        # Length function
+        return sum(self.dataset_numbers.values())
+
+    def __getitem__(self, index):
+        """
+        Getitem special method.
+        Expects an integer value index, between 0 and len(self) - 1.
+        Returns the image and its label as a one hot vector, both
+        in torch tensor format in dataset.
+        """
+        for name, length in self.dataset_numbers.items():
+            if index < length:
+                return self.classes[index]
+            else:
+                index -= length
+        raise ValueError("Index out of bound")
 
 
 class Lung_Dataset(Dataset):
@@ -81,15 +158,10 @@ class Lung_Dataset(Dataset):
         """
         Opens image with specified parameters.
         Parameters:
-        - group_val should take values in 'train', 'test' or 'val'.
-        - class_val variable should be set to 'normal' or 'infected'.
+        - class_val variable should be set to 'normal', non-covid or 'covid'.
         - index_val should be an integer with values between 0 and the maximal number of images in dataset.
         Returns loaded image as a normalized Numpy array.
         """
-        # # Asserts checking for consistency in passed parameters
-        # err_msg = "Error - group_val variable should be set to 'train', 'test' or 'val'."
-        # assert group_val in self.groups, err_msg
-
         err_msg = "Error - class_val variable should be set to 'normal', 'non-covid' and 'covid'"
         assert class_val in self.classes.keys(), err_msg
 
@@ -111,8 +183,7 @@ class Lung_Dataset(Dataset):
         Opens, then displays image with specified parameters.
 
         Parameters:
-        - group_val should take values in 'train', 'test' or 'val'.
-        - class_val variable should be set to 'normal' or 'infected'.
+        - class_val variable should be set to 'normal', non-covid or 'covid'.
         - index_val should be an integer with values between 0 and the maximal number of images in dataset.
         """
 
@@ -143,7 +214,6 @@ class Lung_Dataset(Dataset):
         covid_range = self.dataset_numbers['covid'] + non_covid_range
 
         index = index % covid_range
-        # self.classes = {'normal': 0, 'non-covid': 1, 'covid': 2}
         if 0 <= index < normal_range:
             class_val = 'normal'
             label = torch.Tensor([1, 0, 0])
@@ -158,7 +228,7 @@ class Lung_Dataset(Dataset):
         else:
             raise ValueError("Index larger than the max index")
         im = self.open_img(class_val, index)
-        im = self._transform(im)
+        im = self._transform(Image.fromarray(im))
         im = transforms.functional.to_tensor(np.array(im)).float()
         return im, label
 
@@ -194,7 +264,11 @@ def dataset_distribution(*datasets):
 
 
 if __name__ == '__main__':
-    train_set = Lung_Dataset("train")
+    train_set = Lung_Dataset("train", transform=1)
+    train_set1 = Lung_Dataset("train", transform=2)
+    train_set2 = Lung_Dataset("train", transform=4)
     test_set = Lung_Dataset("test")
     val_set = Lung_Dataset("val")
     dataset_distribution(train_set, test_set, val_set)
+    augmented_set = AugmentedDataset(train_set, train_set2, train_set1)
+    augmented_set.show_img("train", 1, 1, 1, 1)
