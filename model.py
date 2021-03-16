@@ -69,7 +69,7 @@ class BottleNeckLayer(nn.Module):
         else:
             self.bottleneck1 = BottleNeck(in_channels, out_channels, stride=1, shortcut=False)
         for index in range(modules - 1):
-            self.blocks.append(BottleNeck(out_channels * 4, out_channels, stride=1, shortcut=False))
+            self.blocks.append(BottleNeck(out_channels * self.expansion , out_channels, stride=1, shortcut=False))
 
     def forward(self, model):
         out = self.bottleneck1(model)
