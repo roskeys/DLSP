@@ -176,7 +176,7 @@ class Lung_Dataset(Dataset):
         # Open file as before
         path_to_file = '{}/{}.jpg'.format(self.dataset_paths[class_val], index_val)
         with open(path_to_file, 'rb') as f:
-            im = np.asarray(Image.open(f)) / 255.
+            im = np.asarray(Image.open(f))  # / 255.
         return im
 
     def show_img(self, class_val, index_val):
@@ -230,7 +230,7 @@ class Lung_Dataset(Dataset):
             raise ValueError("Index larger than the max index")
         im = self.open_img(class_val, index)
         im = self._transform(Image.fromarray(im))
-        im = transforms.functional.to_tensor(np.array(im)).float()
+        im = transforms.functional.to_tensor(np.array(im) / 255.).float()
         return im, label
 
 
@@ -281,7 +281,16 @@ def get_covid_and_non_covid(y):
     :param y:
     :return:
     """
+    y = y[y[:, 0] != 1]
     return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
+
+def three_class_preprocessing(y):
+    """
+    preprocessing for target y
+    :param y:
+    :return:
+    """
+    return torch.argmax(y, dim=1).long()
 
 
 def load_model(path):
@@ -308,7 +317,7 @@ def plot_loss(train_loss, val_loss, accuracy, name):
     plt.close()
 
 
-def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_callback=None, epochs=1,
+def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(), categories_callback=None, epochs=1,
                 optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True,
                 print_every=1, save_every=1, logger=None):
     logger.info(f"Start training {model.name}")
@@ -317,7 +326,6 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
     model = model.to(device)
     optimizer = optimizer_class(model.parameters(), lr=lr, weight_decay=weight_decay)
-    criterion = loss_function()
     loss_list = []
     accuracy_list = []
     for e in range(1, epochs + 1):
@@ -329,16 +337,17 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
             labels = categories_callback(labels) if categories_callback else labels
-
             # train the model
             optimizer.zero_grad()
             prediction = model.forward(images)
-            loss = criterion(prediction, labels)
+            loss = loss_function(prediction, labels)
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
             # count the number of correct predictions
+            if model.fc.out_features > 1:
+                labels = labels.unsqueeze(1)
             correct_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
             total_count += len(labels)
             step += 1
@@ -361,9 +370,9 @@ if __name__ == '__main__':
     train_set2 = Lung_Dataset("train", transform=4)
     test_set = Lung_Dataset("test")
     val_set = Lung_Dataset("val")
-    dataset_distribution(train_set, test_set, val_set)
+    # dataset_distribution(train_set, test_set, val_set)
     augmented_set = AugmentedDataset(train_set, train_set0, train_set2, train_set1)
-    augmented_set.show_img(group_val="train", transform_val=4, contrast_val=1, brightness_val=1, index_val=1)
+    augmented_set.show_img(group_val="train", transform_val=2, contrast_val=1, brightness_val=1, index_val=1)
     train_set.show_img(class_val='non-covid', index_val=50)
     # from model import Resnet50
     #

@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 from model import Resnet50
-from utils import Lung_Dataset, train_model, get_normal_and_infected, get_covid_and_non_covid, dataset_distribution, \
-    AugmentedDataset
+from utils import Lung_Dataset, train_model, get_normal_and_infected, get_covid_and_non_covid, \
+    three_class_preprocessing, dataset_distribution, AugmentedDataset
 
 if not os.path.exists("logs"):
     os.mkdir("logs")
@@ -56,15 +56,15 @@ val_set = Lung_Dataset("val")
 
 if args.model == 1:
     name = "three_class"
-    loss_func = nn.CrossEntropyLoss
-    category_callback_func = None
+    loss_func = nn.CrossEntropyLoss()
+    category_callback_func = three_class_preprocessing
 elif args.model == 2:
     name = "infected_classifier"
-    loss_func = nn.BCELoss
+    loss_func = nn.BCELoss()
     category_callback_func = get_normal_and_infected
 elif args.model == 3:
     name = "covid_classifier"
-    loss_func = nn.BCELoss
+    loss_func = nn.BCELoss()
     category_callback_func = get_covid_and_non_covid
 else:
     raise NotImplementedError("No such model")
