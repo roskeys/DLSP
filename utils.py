@@ -296,7 +296,6 @@ def three_class_preprocessing(y):
 def load_model(path):
     return torch.load(path)
 
-
 def plot_loss(train_loss, val_loss, accuracy, name):
     plt.figure()
     plt.title("Training loss")
