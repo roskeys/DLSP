@@ -275,14 +275,15 @@ def get_normal_and_infected(y):
     return torch.argmax(torch.cat([normal, infected], dim=1), dim=1).unsqueeze(1).float()
 
 
-def get_covid_and_non_covid(y):
+def get_covid_and_non_covid(x, y):
     """
     non-covid as 0, covid as 1
     :param y:
     :return:
     """
+    x = x[y[:, 0] != 1]
     y = y[y[:, 0] != 1]
-    return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
+    return x, torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
 
 
 def three_class_preprocessing(y):
@@ -340,7 +341,10 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
         start_time = time.time()
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
-            labels = categories_callback(labels) if categories_callback else labels
+            if model.name == "covid_classifier":
+                (images, labels) = categories_callback(images, labels) if categories_callback else (images, labels)
+            else:
+                labels = categories_callback(labels) if categories_callback else labels
             # train the model
             optimizer.zero_grad()
             prediction = model.forward(images)
