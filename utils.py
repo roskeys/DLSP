@@ -352,6 +352,7 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
             # count the number of correct predictions
             if model.fc.out_features > 1:
                 labels = labels.unsqueeze(1)
+                prediction = torch.argmax(prediction)
             correct_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
             total_count += len(labels)
             step += 1
