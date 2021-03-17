@@ -293,7 +293,7 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
     train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
     validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
-    model.to(device)
+    model = model.to(device)
     optimizer = optimizer_class(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = loss_function()
     highest_accuracy = 0
@@ -301,9 +301,9 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
     start_time = time.time()
     for e in range(epochs):
         for images, labels in train_loader:
-            images.to(device)
+            images = images.to(device)
             labels = categories_callback(labels) if categories_callback else labels
-            labels.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
             prediction = model.forward(images)
             loss = criterion(prediction, labels)
