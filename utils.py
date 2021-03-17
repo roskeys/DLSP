@@ -1,10 +1,15 @@
+import os
+import time
+
 import torch
+import torch.nn as nn
 import numpy as np
 from PIL import Image
 from os import listdir
 import matplotlib.pyplot as plt
+from torch.optim import Adam
 from torchvision import transforms
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 
 class AugmentedDataset(Dataset):
@@ -172,7 +177,6 @@ class Lung_Dataset(Dataset):
         path_to_file = '{}/{}.jpg'.format(self.dataset_paths[class_val], index_val)
         with open(path_to_file, 'rb') as f:
             im = np.asarray(Image.open(f)) / 255.
-        f.close()
         return im
 
     def show_img(self, class_val, index_val):
@@ -260,16 +264,46 @@ def dataset_distribution(*datasets):
     plt.show()
 
 
-def train(training_set, validation_set, epochs=1, optimizer=None, lr=0.001, batch_size=64):
-    pass
+def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_index=None, epochs=1,
+                optimizer_class=Adam, lr=0.001,
+                weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=50, save_every=50):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    categories_index = [0, 1] if categories_index is None else categories_index
+    train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
+    validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
+    device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
+    model.to(device)
+    optimizer = optimizer_class(model.parameters(), lr=lr, weight_decay=weight_decay)
+    criterion = loss_function()
+    highest_accuracy = 0
+    steps = 0
+    start_time = time.time()
+    for e in range(epochs):
+        for images, labels in train_loader:
+            images.to(device)
+            labels.to(device)
+            optimizer.zero_grad()
+            prediction = model.forward(images)
+            loss = criterion(prediction, labels[categories_index])
+            loss.backward()
+            optimizer.step()
+            print(loss.item())
 
 
 if __name__ == '__main__':
-    train_set = Lung_Dataset("train", transform=1)
+    train_set = Lung_Dataset("train")
+    train_set0 = Lung_Dataset("train", transform=1)
     train_set1 = Lung_Dataset("train", transform=2)
     train_set2 = Lung_Dataset("train", transform=4)
     test_set = Lung_Dataset("test")
     val_set = Lung_Dataset("val")
-    dataset_distribution(train_set, test_set, val_set)
-    augmented_set = AugmentedDataset(train_set, train_set2, train_set1)
-    augmented_set.show_img("train", 1, 1, 1, 1)
+    # dataset_distribution(train_set, test_set, val_set)
+    # augmented_set = AugmentedDataset(train_set, train_set2, train_set1)
+    # augmented_set.show_img(group_val="train", transform_val=2, contrast_val=1, brightness_val=1, index_val=1)
+    # train_set.show_img(class_val='non-covid', index_val=50)
+    from model import Resnet50
+
+    train_model(Resnet50(hidden_dim=1024), train_set, val_set, loss_function=nn.BCELoss, categories_index=[0, 1],
+                epochs=1, optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models",
+                cuda=True, print_every=50, save_every=50)

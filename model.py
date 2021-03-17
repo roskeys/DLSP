@@ -116,7 +116,7 @@ class Resnet50(nn.Module):
 
 
 if __name__ == '__main__':
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    x = torch.randn((32, 1, 150, 150)).cuda()
-    model = Resnet50().cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    x = torch.randn((32, 1, 150, 150)).to(device)
+    model = Resnet50().to(device)
     out = model(x)
