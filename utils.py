@@ -284,32 +284,75 @@ def get_covid_and_non_covid(y):
     return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
 
 
+def load_model(path):
+    return torch.load(path)
+
+
+def plot_loss(train_loss, val_loss, accuracy, name):
+    plt.figure()
+    plt.title("Training loss")
+    plt.plot(train_loss)
+    plt.plot(val_loss)
+    plt.ylabel("Loss")
+    plt.xlabel("Epoch")
+    plt.legend(["Train", "Validation"], loc="upper left")
+    plt.savefig(f"plots/{name}_Loss_plot.png")
+    plt.close()
+
+    plt.figure()
+    plt.title("Accuracy")
+    plt.plot(accuracy)
+    plt.ylabel("Accuracy")
+    plt.xlabel("Epoch")
+    plt.savefig(f"plots/{name}_Accuracy.png")
+    plt.close()
+
+
 def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_callback=None, epochs=1,
-                optimizer_class=Adam, lr=0.001,
-                weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=50, save_every=50):
+                optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True,
+                print_every=1, save_every=1, logger=None):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    # categories_index = [0, 1] if categories_index is None else categories_index
     train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
     validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
     model = model.to(device)
     optimizer = optimizer_class(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = loss_function()
-    highest_accuracy = 0
-    steps = 0
-    start_time = time.time()
-    for e in range(epochs):
+    loss_list = []
+    accuracy_list = []
+    for e in range(1, epochs + 1):
+        total_loss = 0
+        step = 0
+        correct_count = 0
+        total_count = 0
+        start_time = time.time()
         for images, labels in train_loader:
-            images = images.to(device)
+            images, labels = images.to(device), labels.to(device)
             labels = categories_callback(labels) if categories_callback else labels
-            labels = labels.to(device)
+
+            # train the model
             optimizer.zero_grad()
             prediction = model.forward(images)
             loss = criterion(prediction, labels)
             loss.backward()
             optimizer.step()
-            print(loss.item())
+
+            total_loss += loss.item()
+            # count the number of correct predictions
+            correct_count += len(labels)
+            total_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
+
+        average_loss = total_loss / step
+        accuracy = correct_count / total_count
+        loss_list.append(average_loss)
+
+        accuracy_list.append(accuracy)
+        if e % print_every == 0:
+            logger.info(
+                f"epoch: {e:3d} Training loss:{average_loss:.3f} Accuracy: {accuracy:.3f} Time taken: {int(time.time() - start_time)}s")
+        if e % save_every == 0:
+            torch.save(model, os.path.join(save_path, model.name + "_model.h5"))
 
 
 if __name__ == '__main__':
@@ -325,7 +368,25 @@ if __name__ == '__main__':
     # train_set.show_img(class_val='non-covid', index_val=50)
     from model import Resnet50
 
-    train_model(Resnet50(hidden_dim=1024, out_dim=2), train_set, val_set, loss_function=nn.BCELoss,
-                categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam, lr=0.001,
-                weight_decay=0.001, batch_size=64, save_path="saved_models",
-                cuda=True, print_every=50, save_every=50)
+    import logging
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)15s %(levelname)5s: %(message)s')
+
+    stream = logging.StreamHandler()
+    stream.setLevel(logging.INFO)
+    stream.setFormatter(formatter)
+    logger.addHandler(stream)
+
+    handler = logging.FileHandler(f'logs/runner.py_{time.strftime("%d-%H-%M-%S", time.localtime(time.time()))}.log')
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    train_model(Resnet50(name="normal_and_infected", hidden_dim=1024, out_dim=2), train_set, val_set,
+                loss_function=nn.BCELoss, categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam,
+                lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=1,
+                save_every=1, logger=logger)
