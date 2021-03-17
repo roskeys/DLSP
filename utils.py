@@ -354,7 +354,7 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
                 labels = labels.unsqueeze(1)
                 prediction = torch.argmax(prediction.detach().cpu(), dim=1).int().unsqueeze(1)
             else:
-                prediction.detach().cpu().round().int()
+                prediction = prediction.detach().cpu().round().int()
             correct_count += torch.sum(labels.detach().cpu().int() == prediction)
             total_count += len(labels)
             step += 1
