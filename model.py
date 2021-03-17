@@ -108,7 +108,7 @@ class Resnet50(nn.Module):
         x = self.bottle_neck_layer_2(x)
         x = self.bottle_neck_layer_3(x)
         x = self.bottle_neck_layer_4(x)
-        x = F.avg_pool2d(x, kernel_size=7, stride=1)
+        x = F.avg_pool2d(x, kernel_size=5, stride=1)
         x = x.view(x.size(0), -1)
         x = self.hidden(x)
         x = self.dropout(x)
