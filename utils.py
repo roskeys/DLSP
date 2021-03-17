@@ -1,13 +1,10 @@
-from os import listdir
-import matplotlib.pyplot as plt
+import torch
 import numpy as np
 from PIL import Image
-import torch
-from torch.utils.data import Dataset, DataLoader
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
+from os import listdir
+import matplotlib.pyplot as plt
 from torchvision import transforms
+from torch.utils.data import Dataset
 
 
 class AugmentedDataset(Dataset):
@@ -261,6 +258,10 @@ def dataset_distribution(*datasets):
 
     fig.tight_layout()
     plt.show()
+
+
+def train(training_set, validation_set, epochs=1, optimizer=None, lr=0.001, batch_size=64):
+    pass
 
 
 if __name__ == '__main__':
