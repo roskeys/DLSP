@@ -32,21 +32,26 @@ class BottleNeck(nn.Module):
 
     def forward(self, model):
         identity = model
-        out = self.conv1(model)
+        print("New BottleNeck Block.", "The input shape is:", model.shape)
 
+        out = self.conv1(model)
         out = self.bn1(out)
         out = self.relu(out)
+        print("First Conv Layer output shape is:", out.shape)
 
         out = self.conv2(out)
         out = self.bn2(out)
         out = self.relu(out)
+        print("Second Conv Layer output shape is:", out.shape)
 
         out = self.conv3(out)
         out = self.bn3(out)
+        print("Third Conv Layer output shape is:", out.shape)
 
         if self.shortcut:
             identity = self.convs(model)
             identity = self.bns(identity)
+            print("Shortcut Conv Layer output shape is:", identity.shape)
 
         out += identity
         out = self.relu(out)
