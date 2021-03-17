@@ -136,7 +136,7 @@ class Lung_Dataset(Dataset):
             if self.transform & 2:
                 im = transforms.ColorJitter(contrast=self.contrast)(im)
             if self.transform & 4:
-                im.transform.ColorJitter(brightness=self.brightness)(im)
+                im = transforms.ColorJitter(brightness=self.brightness)(im)
         return im
 
     def describe(self):
