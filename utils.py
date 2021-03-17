@@ -264,12 +264,32 @@ def dataset_distribution(*datasets):
     plt.show()
 
 
-def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_index=None, epochs=1,
+def get_normal_and_infected(y):
+    """
+    normal as 0, infected as 1
+    :param y:
+    :return:
+    """
+    normal = y[:, 0].unsqueeze(1)
+    infected = torch.sum(y[:, 1:], dim=1, keepdim=True)
+    return torch.argmax(torch.cat([normal, infected], dim=1), dim=1).unsqueeze(1).float()
+
+
+def get_covid_and_non_covid(y):
+    """
+    non-covid as 0, covid as 1
+    :param y:
+    :return:
+    """
+    return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
+
+
+def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_callback=None, epochs=1,
                 optimizer_class=Adam, lr=0.001,
                 weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=50, save_every=50):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    categories_index = [0, 1] if categories_index is None else categories_index
+    # categories_index = [0, 1] if categories_index is None else categories_index
     train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
     validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
@@ -282,10 +302,11 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
     for e in range(epochs):
         for images, labels in train_loader:
             images.to(device)
+            labels = categories_callback(labels) if categories_callback else labels
             labels.to(device)
             optimizer.zero_grad()
             prediction = model.forward(images)
-            loss = criterion(prediction, labels[categories_index])
+            loss = criterion(prediction, labels)
             loss.backward()
             optimizer.step()
             print(loss.item())
@@ -304,6 +325,7 @@ if __name__ == '__main__':
     # train_set.show_img(class_val='non-covid', index_val=50)
     from model import Resnet50
 
-    train_model(Resnet50(hidden_dim=1024), train_set, val_set, loss_function=nn.BCELoss, categories_index=[0, 1],
-                epochs=1, optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models",
+    train_model(Resnet50(hidden_dim=1024, out_dim=2), train_set, val_set, loss_function=nn.BCELoss,
+                categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam, lr=0.001,
+                weight_decay=0.001, batch_size=64, save_path="saved_models",
                 cuda=True, print_every=50, save_every=50)
