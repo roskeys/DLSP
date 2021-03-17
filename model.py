@@ -74,7 +74,7 @@ class BottleNeckLayer(nn.Module):
         if downsample:
             self.bottleneck1 = BottleNeck(in_channels, out_channels, stride=2, shortcut=True)
         else:
-            self.bottleneck1 = BottleNeck(in_channels, out_channels, stride=1, shortcut=False)
+            self.bottleneck1 = BottleNeck(in_channels, out_channels, stride=1, shortcut=True)
         for index in range(modules - 1):
             self.blocks.append(BottleNeck(out_channels * self.expansion, out_channels, stride=1, shortcut=False))
 
