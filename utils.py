@@ -311,8 +311,7 @@ def plot_loss(train_loss, val_loss, accuracy, name):
 def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, categories_callback=None, epochs=1,
                 optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True,
                 print_every=1, save_every=1, logger=None):
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    logger.info(f"Start training {model.name}")
     train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
     validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
@@ -340,19 +339,19 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss, c
 
             total_loss += loss.item()
             # count the number of correct predictions
-            correct_count += len(labels)
-            total_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
+            correct_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
+            total_count += len(labels)
+            step += 1
 
         average_loss = total_loss / step
         accuracy = correct_count / total_count
         loss_list.append(average_loss)
-
         accuracy_list.append(accuracy)
         if e % print_every == 0:
             logger.info(
-                f"epoch: {e:3d} Training loss:{average_loss:.3f} Accuracy: {accuracy:.3f} Time taken: {int(time.time() - start_time)}s")
+                f"epoch: {e:3d} Training loss:{average_loss:.3f} Accuracy: {accuracy * 100:.1f}% Time taken: {int(time.time() - start_time)}s")
         if e % save_every == 0:
-            torch.save(model, os.path.join(save_path, model.name + "_model.h5"))
+            torch.save(model, os.path.join(save_path, model.name + f"_model-{e}.h5"))
 
 
 if __name__ == '__main__':
@@ -362,31 +361,31 @@ if __name__ == '__main__':
     train_set2 = Lung_Dataset("train", transform=4)
     test_set = Lung_Dataset("test")
     val_set = Lung_Dataset("val")
-    # dataset_distribution(train_set, test_set, val_set)
-    # augmented_set = AugmentedDataset(train_set, train_set2, train_set1)
-    # augmented_set.show_img(group_val="train", transform_val=2, contrast_val=1, brightness_val=1, index_val=1)
-    # train_set.show_img(class_val='non-covid', index_val=50)
-    from model import Resnet50
-
-    import logging
-
-    if not os.path.exists("logs"):
-        os.mkdir("logs")
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)15s %(levelname)5s: %(message)s')
-
-    stream = logging.StreamHandler()
-    stream.setLevel(logging.INFO)
-    stream.setFormatter(formatter)
-    logger.addHandler(stream)
-
-    handler = logging.FileHandler(f'logs/runner.py_{time.strftime("%d-%H-%M-%S", time.localtime(time.time()))}.log')
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    train_model(Resnet50(name="normal_and_infected", hidden_dim=1024, out_dim=2), train_set, val_set,
-                loss_function=nn.BCELoss, categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam,
-                lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=1,
-                save_every=1, logger=logger)
+    dataset_distribution(train_set, test_set, val_set)
+    augmented_set = AugmentedDataset(train_set, train_set0, train_set2, train_set1)
+    augmented_set.show_img(group_val="train", transform_val=4, contrast_val=1, brightness_val=1, index_val=1)
+    train_set.show_img(class_val='non-covid', index_val=50)
+    # from model import Resnet50
+    #
+    # import logging
+    #
+    # if not os.path.exists("logs"):
+    #     os.mkdir("logs")
+    # logger = logging.getLogger()
+    # logger.setLevel(logging.INFO)
+    # formatter = logging.Formatter('%(asctime)15s %(levelname)5s: %(message)s')
+    #
+    # stream = logging.StreamHandler()
+    # stream.setLevel(logging.INFO)
+    # stream.setFormatter(formatter)
+    # logger.addHandler(stream)
+    #
+    # handler = logging.FileHandler(f'logs/runner.py_{time.strftime("%d-%H-%M-%S", time.localtime(time.time()))}.log')
+    # handler.setLevel(logging.INFO)
+    # handler.setFormatter(formatter)
+    # logger.addHandler(handler)
+    #
+    # train_model(Resnet50(name="normal_and_infected", hidden_dim=1024, out_dim=1), train_set, val_set,
+    #             loss_function=nn.BCELoss, categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam,
+    #             lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=1,
+    #             save_every=1, logger=logger)
