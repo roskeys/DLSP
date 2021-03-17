@@ -284,6 +284,7 @@ def get_covid_and_non_covid(y):
     y = y[y[:, 0] != 1]
     return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
 
+
 def three_class_preprocessing(y):
     """
     preprocessing for target y
@@ -296,7 +297,8 @@ def three_class_preprocessing(y):
 def load_model(path):
     return torch.load(path)
 
-def plot_loss(train_loss, val_loss, accuracy, name):
+
+def plot_loss(train_loss, val_loss, name):
     plt.figure()
     plt.title("Training loss")
     plt.plot(train_loss)
@@ -307,9 +309,12 @@ def plot_loss(train_loss, val_loss, accuracy, name):
     plt.savefig(f"plots/{name}_Loss_plot.png")
     plt.close()
 
+
+def plot_accuracy(train_accuracy, val_accuracy, name):
     plt.figure()
     plt.title("Accuracy")
-    plt.plot(accuracy)
+    plt.plot(train_accuracy)
+    plt.plot(val_accuracy)
     plt.ylabel("Accuracy")
     plt.xlabel("Epoch")
     plt.savefig(f"plots/{name}_Accuracy.png")
