@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from sklearn.metrics import multilabel_confusion_matrix
 
 
@@ -33,6 +34,21 @@ def calc_accuracy(predicted_labels, truth_labels, category_callback_func):
     truth_labels = category_callback_func(truth_labels)
     return (torch.sum(predicted_labels.int() == truth_labels.int()) / len(truth_labels)).item()
 
+def _output_to_int(labels, mode):
+    """
+    predicted_labels: Predicted labels
+    mode: can be sigmoid or softmax
+    output: int array for truth labels, 1-d
+    """
+    if mode == "sigmoid":
+        result = np.array(round(labels), dtype = 'int64')
+        result = result.reshape(len(result))
+        return result
+    elif mode == "softmax":
+        result = np.argmax(labels, axis = 1)
+        return result     
+    else:
+        print("Wrong mode. Please choose from sigmoid and softmax.")
 
 def confusion_matrix(predicted_labels, truth_labels):
     """
@@ -40,7 +56,9 @@ def confusion_matrix(predicted_labels, truth_labels):
     truth_labels: Ground truth
     output: calculated confusion matrix, with an extra dimension denoting multiclass
     """
-    confusion_matrix = multilabel_confusion_matrix(truth_labels, predicted_labels)
+    pred = _output_to_int(predicted_labels)
+    truth = _output_to_int(truth_labels)
+    confusion_matrix = multilabel_confusion_matrix(truth, pred)
     return confusion_matrix
 
 
