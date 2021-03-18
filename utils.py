@@ -378,7 +378,6 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
             correct_count += torch.sum(labels.detach().cpu().int() == prediction)
             total_count += len(labels)
             step += 1
-            break
 
         average_loss = total_loss / step
         accuracy = correct_count.item() / total_count
