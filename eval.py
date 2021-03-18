@@ -50,19 +50,20 @@ def _output_to_int(labels, mode):
     else:
         print("Wrong mode. Please choose from sigmoid and softmax.")
 
-def confusion_matrix(predicted_labels, truth_labels):
+def confusion_matrix(predicted_labels, truth_labels, mode):
     """
     predicted_labels: Predicted labels
     truth_labels: Ground truth
+    mode: can be sigmoid or softmax
     output: calculated confusion matrix, with an extra dimension denoting multiclass
     """
-    pred = _output_to_int(predicted_labels)
-    truth = _output_to_int(truth_labels)
+    pred = _output_to_int(predicted_labels, mode)
+    truth = _output_to_int(truth_labels, mode)
     confusion_matrix = multilabel_confusion_matrix(truth, pred)
     return confusion_matrix
 
 
-def eval(model, dataloader, category_callback_func):
+def eval(model, dataloader, mode, category_callback_func):
     """
     model: model input
     dataloader: data input
@@ -70,7 +71,7 @@ def eval(model, dataloader, category_callback_func):
     """
     predicted_labels, truth_labels = predict(model, dataloader)
     acc = accuracy(predicted_labels, truth_labels)
-    conf_mat = confusion_matrix(predicted_labels, truth_labels)[-1]
+    conf_mat = confusion_matrix(predicted_labels, truth_labels, mode)[-1]
     precision = conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[0, 1])
     recall = conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[1, 0])
     f1score = 2 * precision * recall / (precision + recall)
