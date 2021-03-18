@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from torch.optim import Adam
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
+from evaluate import eval
 
 
 class AugmentedDataset(Dataset):
@@ -281,8 +282,12 @@ def get_covid_and_non_covid(x, y):
     :param y:
     :return:
     """
+    if y.shape[0] == 0:
+        return x, y
     x = x[y[:, 0] != 1]
     y = y[y[:, 0] != 1]
+    if y.shape[0] == 0:
+        return x, y
     return x, torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
 
 
@@ -306,10 +311,18 @@ def plot_loss(train_loss, val_loss, name):
     plt.plot(val_loss)
     plt.ylabel("Loss")
     plt.xlabel("Epoch")
-    plt.legend(["Train", "Validation"], loc="upper left")
+    plt.legend(["Train", "Validation"], loc="upper right")
     plt.savefig(f"plots/{name}_Loss_plot.png")
     plt.close()
 
+def plot_step_loss(step_loss, name):
+    plt.figure()
+    plt.title("Stepwise training loss")
+    plt.plot(step_loss)
+    plt.ylabel("Loss")
+    plt.xlabel("Epoch")
+    plt.savefig(f"plots/{name}_stepwise_Loss_plot.png")
+    plt.close()
 
 def plot_accuracy(train_accuracy, val_accuracy, name):
     plt.figure()
@@ -318,21 +331,21 @@ def plot_accuracy(train_accuracy, val_accuracy, name):
     plt.plot(val_accuracy)
     plt.ylabel("Accuracy")
     plt.xlabel("Epoch")
+    plt.legend(["Train", "Validation"], loc="upper left")
     plt.savefig(f"plots/{name}_Accuracy.png")
     plt.close()
 
 
-def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(), categories_callback=None, epochs=1,
-                optimizer_class=Adam, lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True,
+def train_model(model, train_loader, val_loader, loss_function=None, process_y=None, epochs=1,
+                optimizer_class=None, lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True,
                 print_every=1, save_every=1, logger=None):
     logger.info(f"Start training {model.name}")
-    train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
-    validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=True)
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
     model = model.to(device)
     optimizer = optimizer_class(model.parameters(), lr=lr, weight_decay=weight_decay)
-    loss_list = []
-    accuracy_list = []
+    training_loss_list, val_loss_list = [], []
+    training_acc_list, val_acc_list = [], []
+    step_loss_list = []
     for e in range(1, epochs + 1):
         total_loss = 0
         step = 0
@@ -342,9 +355,11 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
             if model.name == "covid_classifier":
-                (images, labels) = categories_callback(images, labels) if categories_callback else (images, labels)
+                (images, labels) = process_y(images, labels) if process_y else (images, labels)
             else:
-                labels = categories_callback(labels) if categories_callback else labels
+                labels = process_y(labels) if process_y else labels
+            if labels.shape[0] < 1:
+                continue
             # train the model
             optimizer.zero_grad()
             prediction = model.forward(images)
@@ -352,6 +367,7 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
             loss.backward()
             optimizer.step()
 
+            step_loss_list.append(loss.item())
             total_loss += loss.item()
             # count the number of correct predictions
             if model.fc.out_features > 1:
@@ -362,14 +378,26 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
             correct_count += torch.sum(labels.detach().cpu().int() == prediction)
             total_count += len(labels)
             step += 1
+            break
 
         average_loss = total_loss / step
-        accuracy = correct_count / total_count
-        loss_list.append(average_loss)
-        accuracy_list.append(accuracy)
+        accuracy = correct_count.item() / total_count
+        training_loss_list.append(average_loss)
+        training_acc_list.append(accuracy)
+
+        acc, val_loss, conf_mat, precision, recall, f1score = eval(model, dataloader=val_loader, convert_func=process_y,
+                                                                   device=device, loss_func=loss_function)
+        val_loss_list.append(val_loss)
+        val_acc_list.append(acc)
+
         if e % print_every == 0:
             logger.info(
                 f"epoch: {e:3d} Training loss:{average_loss:.3f} Accuracy: {accuracy * 100:.1f}% Time taken: {int(time.time() - start_time)}s")
+            logger.info(
+                f"epoch: {e:3d} Validate loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score}")
+            plot_loss(training_loss_list, val_loss_list, model.name)
+            plot_accuracy(training_acc_list, val_acc_list, model.name)
+            plot_step_loss(step_loss_list, model.name)
         if e % save_every == 0:
             torch.save(model, os.path.join(save_path, model.name + f"_model-{e}.h5"))
 
@@ -385,27 +413,42 @@ if __name__ == '__main__':
     augmented_set = AugmentedDataset(train_set, train_set0, train_set2, train_set1)
     augmented_set.show_img(group_val="train", transform_val=2, contrast_val=1, brightness_val=1, index_val=1)
     train_set.show_img(class_val='non-covid', index_val=50)
-    # from model import Resnet50
-    #
-    # import logging
-    #
-    # if not os.path.exists("logs"):
-    #     os.mkdir("logs")
-    # logger = logging.getLogger()
-    # logger.setLevel(logging.INFO)
-    # formatter = logging.Formatter('%(asctime)15s %(levelname)5s: %(message)s')
-    #
-    # stream = logging.StreamHandler()
-    # stream.setLevel(logging.INFO)
-    # stream.setFormatter(formatter)
-    # logger.addHandler(stream)
-    #
-    # handler = logging.FileHandler(f'logs/runner.py_{time.strftime("%d-%H-%M-%S", time.localtime(time.time()))}.log')
-    # handler.setLevel(logging.INFO)
-    # handler.setFormatter(formatter)
-    # logger.addHandler(handler)
-    #
-    # train_model(Resnet50(name="normal_and_infected", hidden_dim=1024, out_dim=1), train_set, val_set,
-    #             loss_function=nn.BCELoss, categories_callback=get_normal_and_infected, epochs=1, optimizer_class=Adam,
-    #             lr=0.001, weight_decay=0.001, batch_size=64, save_path="saved_models", cuda=True, print_every=1,
-    #             save_every=1, logger=logger)
+    from model import Resnet50
+
+    import logging
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)15s %(levelname)5s: %(message)s')
+
+    stream = logging.StreamHandler()
+    stream.setLevel(logging.INFO)
+    stream.setFormatter(formatter)
+    logger.addHandler(stream)
+
+    handler = logging.FileHandler(
+        f'logs/runner.py_{time.strftime("%d-%H-%M-%S", time.localtime(time.time()))}.log')
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_set, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=64, shuffle=True)
+
+    train_model(Resnet50(name="infected_classifier", hidden_dim=1024, out_dim=2), train_loader, val_loader,
+                loss_function=nn.BCELoss(), process_y=get_normal_and_infected, epochs=3, optimizer_class=Adam,
+                lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True, print_every=1,
+                save_every=1, logger=logger)
+
+    train_model(Resnet50(name="covid_classifier", hidden_dim=1024, out_dim=2), train_loader, val_loader,
+                loss_function=nn.BCELoss(), process_y=get_covid_and_non_covid, epochs=3, optimizer_class=Adam,
+                lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True, print_every=1,
+                save_every=1, logger=logger)
+
+    train_model(Resnet50(name="three_class", hidden_dim=1024, out_dim=3), train_loader, val_loader,
+                loss_function=nn.CrossEntropyLoss(), process_y=three_class_preprocessing, epochs=3,
+                optimizer_class=Adam, lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True,
+                print_every=1, save_every=1, logger=logger)

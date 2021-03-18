@@ -6,6 +6,8 @@ import logging
 import torch
 import torch.nn as nn
 from torch.optim import Adam
+from torch.utils.data import DataLoader
+
 from model import Resnet50
 from utils import Lung_Dataset, train_model, get_normal_and_infected, get_covid_and_non_covid, \
     three_class_preprocessing, dataset_distribution, AugmentedDataset
@@ -15,6 +17,9 @@ if not os.path.exists("logs"):
 
 if not os.path.exists("saved_models"):
     os.makedirs("saved_models")
+
+if not os.path.exists("plots"):
+    os.makedirs("plots")
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -57,24 +62,28 @@ val_set = Lung_Dataset("val")
 if args.model == 1:
     name = "three_class"
     loss_func = nn.CrossEntropyLoss()
-    category_callback_func = three_class_preprocessing
+    preprocess_for_y = three_class_preprocessing
 elif args.model == 2:
     name = "infected_classifier"
     loss_func = nn.BCELoss()
-    category_callback_func = get_normal_and_infected
+    preprocess_for_y = get_normal_and_infected
 elif args.model == 3:
     name = "covid_classifier"
     loss_func = nn.BCELoss()
-    category_callback_func = get_covid_and_non_covid
+    preprocess_for_y = get_covid_and_non_covid
 else:
     raise NotImplementedError("No such model")
 
 model = Resnet50(name=name, hidden_dim=args.hidden_units, out_dim=2 if args.model > 1 else 3)
+
+train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
+val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=True)
+test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True)
+
 try:
-    train_model(model, train_set, val_set, loss_function=loss_func, categories_callback=category_callback_func,
+    train_model(model, train_loader, val_loader, loss_function=loss_func, process_y=preprocess_for_y,
                 epochs=args.epochs, cuda=args.gpu, optimizer_class=Adam, lr=args.lr, weight_decay=args.C,
-                batch_size=args.batch_size, save_path=args.save_dir, print_every=args.print_every,
-                save_every=args.save_every, logger=logger)
+                save_path=args.save_dir, print_every=args.print_every, save_every=args.save_every, logger=logger)
 except KeyboardInterrupt:
     pass
 finally:
