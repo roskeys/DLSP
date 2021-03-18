@@ -315,6 +315,7 @@ def plot_loss(train_loss, val_loss, name):
     plt.savefig(f"plots/{name}_Loss_plot.png")
     plt.close()
 
+
 def plot_step_loss(step_loss, name):
     plt.figure()
     plt.title("Stepwise training loss")
@@ -323,6 +324,7 @@ def plot_step_loss(step_loss, name):
     plt.xlabel("Epoch")
     plt.savefig(f"plots/{name}_stepwise_Loss_plot.png")
     plt.close()
+
 
 def plot_accuracy(train_accuracy, val_accuracy, name):
     plt.figure()
@@ -338,7 +340,7 @@ def plot_accuracy(train_accuracy, val_accuracy, name):
 
 def train_model(model, train_loader, val_loader, loss_function=None, process_y=None, epochs=1,
                 optimizer_class=None, lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True,
-                print_every=1, save_every=1, logger=None):
+                print_every=1, save_every=1, logger=None, debug=False):
     logger.info(f"Start training {model.name}")
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
     model = model.to(device)
@@ -378,6 +380,8 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
             correct_count += torch.sum(labels.detach().cpu().int() == prediction)
             total_count += len(labels)
             step += 1
+            if debug:
+                break
 
         average_loss = total_loss / step
         accuracy = correct_count.item() / total_count
@@ -393,7 +397,7 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
             logger.info(
                 f"epoch: {e:3d} Training loss:{average_loss:.3f} Accuracy: {accuracy * 100:.1f}% Time taken: {int(time.time() - start_time)}s")
             logger.info(
-                f"epoch: {e:3d} Validate loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score}")
+                f"epoch: {e:3d} Validate loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score:.3f}")
             plot_loss(training_loss_list, val_loss_list, model.name)
             plot_accuracy(training_acc_list, val_acc_list, model.name)
             plot_step_loss(step_loss_list, model.name)
@@ -440,14 +444,14 @@ if __name__ == '__main__':
     train_model(Resnet50(name="infected_classifier", hidden_dim=1024, out_dim=2), train_loader, val_loader,
                 loss_function=nn.BCELoss(), process_y=get_normal_and_infected, epochs=3, optimizer_class=Adam,
                 lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True, print_every=1,
-                save_every=1, logger=logger)
+                save_every=1, logger=logger, debug=True)
 
     train_model(Resnet50(name="covid_classifier", hidden_dim=1024, out_dim=2), train_loader, val_loader,
                 loss_function=nn.BCELoss(), process_y=get_covid_and_non_covid, epochs=3, optimizer_class=Adam,
                 lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True, print_every=1,
-                save_every=1, logger=logger)
+                save_every=1, logger=logger, debug=True)
 
     train_model(Resnet50(name="three_class", hidden_dim=1024, out_dim=3), train_loader, val_loader,
                 loss_function=nn.CrossEntropyLoss(), process_y=three_class_preprocessing, epochs=3,
                 optimizer_class=Adam, lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True,
-                print_every=1, save_every=1, logger=logger)
+                print_every=1, save_every=1, logger=logger, debug=True)
