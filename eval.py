@@ -72,9 +72,9 @@ def eval(model, dataloader, mode, category_callback_func):
     predicted_labels, truth_labels = predict(model, dataloader)
     acc = accuracy(predicted_labels, truth_labels)
     conf_mat = confusion_matrix(predicted_labels, truth_labels, mode)[-1]
-    precision = conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[0, 1])
-    recall = conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[1, 0])
-    f1score = 2 * precision * recall / (precision + recall)
+    precision = 0 if conf_mat[1, 1] == 0 else conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[0, 1])
+    recall = 0 if conf_mat[1, 1] == 0 else conf_mat[1, 1] / (conf_mat[1, 1] + conf_mat[1, 0])
+    f1score = 0 if precision * recall == 0 else 2 * precision * recall / (precision + recall)
     print("Evaluation of model done. Accuracy:", acc,
           "\nPrecision:", precision,
           "\nRecall:", recall,
