@@ -275,14 +275,16 @@ def get_normal_and_infected(y):
     return torch.argmax(torch.cat([normal, infected], dim=1), dim=1).unsqueeze(1).float()
 
 
-def get_covid_and_non_covid(y):
+def get_covid_and_non_covid(x, y):
     """
     non-covid as 0, covid as 1
     :param y:
     :return:
     """
+    x = x[y[:, 0] != 1]
     y = y[y[:, 0] != 1]
-    return torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
+    return x, torch.argmax(y[:, [1, 2]], dim=1).unsqueeze(1).float()
+
 
 def three_class_preprocessing(y):
     """
@@ -296,7 +298,8 @@ def three_class_preprocessing(y):
 def load_model(path):
     return torch.load(path)
 
-def plot_loss(train_loss, val_loss, accuracy, name):
+
+def plot_loss(train_loss, val_loss, name):
     plt.figure()
     plt.title("Training loss")
     plt.plot(train_loss)
@@ -307,9 +310,12 @@ def plot_loss(train_loss, val_loss, accuracy, name):
     plt.savefig(f"plots/{name}_Loss_plot.png")
     plt.close()
 
+
+def plot_accuracy(train_accuracy, val_accuracy, name):
     plt.figure()
     plt.title("Accuracy")
-    plt.plot(accuracy)
+    plt.plot(train_accuracy)
+    plt.plot(val_accuracy)
     plt.ylabel("Accuracy")
     plt.xlabel("Epoch")
     plt.savefig(f"plots/{name}_Accuracy.png")
@@ -335,7 +341,10 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
         start_time = time.time()
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
-            labels = categories_callback(labels) if categories_callback else labels
+            if model.name == "covid_classifier":
+                (images, labels) = categories_callback(images, labels) if categories_callback else (images, labels)
+            else:
+                labels = categories_callback(labels) if categories_callback else labels
             # train the model
             optimizer.zero_grad()
             prediction = model.forward(images)
@@ -347,7 +356,10 @@ def train_model(model, training_set, validation_set, loss_function=nn.BCELoss(),
             # count the number of correct predictions
             if model.fc.out_features > 1:
                 labels = labels.unsqueeze(1)
-            correct_count += torch.sum(labels.detach().cpu().int() == prediction.detach().cpu().round().int())
+                prediction = torch.argmax(prediction.detach().cpu(), dim=1).int().unsqueeze(1)
+            else:
+                prediction = prediction.detach().cpu().round().int()
+            correct_count += torch.sum(labels.detach().cpu().int() == prediction)
             total_count += len(labels)
             step += 1
 
