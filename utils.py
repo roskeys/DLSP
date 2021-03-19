@@ -88,7 +88,7 @@ class AugmentedDataset(Dataset):
         """
         for name, length in self.dataset_numbers.items():
             if index < length:
-                return self.classes[index]
+                return self.classes[name][index]
             else:
                 index -= length
         raise ValueError("Index out of bound")
