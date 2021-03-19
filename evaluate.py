@@ -14,7 +14,7 @@ def predict(model, dataloader, convert_func=None, device=None, loss_func=None):
     running_loss = 0
     with torch.no_grad():
         for sample, label in dataloader:
-            if model.name == "covid_classifier":
+            if "covid_classifier" in model.name:
                 (sample, label) = convert_func(sample, label)
             else:
                 label = convert_func(label)
@@ -29,7 +29,7 @@ def predict(model, dataloader, convert_func=None, device=None, loss_func=None):
             result.append(output.detach().cpu())
             origin.append(label.detach().cpu())
     result, origin = torch.cat(result, dim=0), torch.cat(origin, dim=0)
-    if model.name == "infected_classifier" or model.name == "covid_classifier":
+    if "infected_classifier" in model.name or "covid_classifier" in model.name:
         result = result.round()
     else:
         result = torch.argmax(result, dim=1)

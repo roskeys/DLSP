@@ -81,16 +81,17 @@ class BottleNeckLayer(nn.Module):
         return out
 
 
-class Resnet50(nn.Module):
-    def __init__(self, name, hidden_dim=1024, out_dim=2, dropout_p=0.5):
-        super(Resnet50, self).__init__()
+class Resnet(nn.Module):
+    def __init__(self, name, hidden_dim=1024, out_dim=2, dropout_p=0.5, bottlenecks=None):
+        super(Resnet, self).__init__()
+        assert len(bottlenecks) == 4
         self.name = name
         self.conv = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, padding=3, stride=2, bias=False)
         self.bn = nn.BatchNorm2d(64)
-        self.bottle_neck_layer_1 = BottleNeckLayer(64, 64, 3, False)
-        self.bottle_neck_layer_2 = BottleNeckLayer(256, 128, 4, True)
-        self.bottle_neck_layer_3 = BottleNeckLayer(512, 256, 6, True)
-        self.bottle_neck_layer_4 = BottleNeckLayer(1024, 512, 3, True)
+        self.bottle_neck_layer_1 = BottleNeckLayer(64, 64, bottlenecks[0], False)
+        self.bottle_neck_layer_2 = BottleNeckLayer(256, 128, bottlenecks[1], True)
+        self.bottle_neck_layer_3 = BottleNeckLayer(512, 256, bottlenecks[2], True)
+        self.bottle_neck_layer_4 = BottleNeckLayer(1024, 512, bottlenecks[3], True)
         self.hidden = nn.Linear(2048, hidden_dim)
         self.out_dim = out_dim
         if out_dim == 2:
@@ -115,77 +116,9 @@ class Resnet50(nn.Module):
         else:
             return torch.softmax(x, -1)
 
-class Resnet101(nn.Module):
-    def __init__(self, name, hidden_dim=1024, out_dim=2, dropout_p=0.5):
-        super(Resnet152, self).__init__()
-        self.name = name
-        self.conv = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, padding=3, stride=2, bias=False)
-        self.bn = nn.BatchNorm2d(64)
-        self.bottle_neck_layer_1 = BottleNeckLayer(64, 64, 3, False)
-        self.bottle_neck_layer_2 = BottleNeckLayer(256, 128, 4, True)
-        self.bottle_neck_layer_3 = BottleNeckLayer(512, 256, 23, True)
-        self.bottle_neck_layer_4 = BottleNeckLayer(1024, 512, 3, True)
-        self.hidden = nn.Linear(2048, hidden_dim)
-        self.out_dim = out_dim
-        if out_dim == 2:
-            out_dim = 1
-        self.fc = nn.Linear(hidden_dim, out_dim)
-        self.dropout = nn.Dropout(dropout_p)
-
-    def forward(self, image):
-        x = torch.relu(self.conv(image))
-        x = F.max_pool2d(x, kernel_size=3, stride=2)
-        x = self.bottle_neck_layer_1(x)
-        x = self.bottle_neck_layer_2(x)
-        x = self.bottle_neck_layer_3(x)
-        x = self.bottle_neck_layer_4(x)
-        x = F.avg_pool2d(x, kernel_size=5, stride=1)
-        x = x.view(x.size(0), -1)
-        x = self.hidden(x)
-        x = self.dropout(x)
-        x = self.fc(x)
-        if self.out_dim == 2:
-            return torch.sigmoid(x)
-        else:
-            return torch.softmax(x, -1)
-
-
-class Resnet152(nn.Module):
-    def __init__(self, name, hidden_dim=1024, out_dim=2, dropout_p=0.5):
-        super(Resnet152, self).__init__()
-        self.name = name
-        self.conv = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, padding=3, stride=2, bias=False)
-        self.bn = nn.BatchNorm2d(64)
-        self.bottle_neck_layer_1 = BottleNeckLayer(64, 64, 3, False)
-        self.bottle_neck_layer_2 = BottleNeckLayer(256, 128, 8, True)
-        self.bottle_neck_layer_3 = BottleNeckLayer(512, 256, 36, True)
-        self.bottle_neck_layer_4 = BottleNeckLayer(1024, 512, 3, True)
-        self.hidden = nn.Linear(2048, hidden_dim)
-        self.out_dim = out_dim
-        if out_dim == 2:
-            out_dim = 1
-        self.fc = nn.Linear(hidden_dim, out_dim)
-        self.dropout = nn.Dropout(dropout_p)
-
-    def forward(self, image):
-        x = torch.relu(self.conv(image))
-        x = F.max_pool2d(x, kernel_size=3, stride=2)
-        x = self.bottle_neck_layer_1(x)
-        x = self.bottle_neck_layer_2(x)
-        x = self.bottle_neck_layer_3(x)
-        x = self.bottle_neck_layer_4(x)
-        x = F.avg_pool2d(x, kernel_size=5, stride=1)
-        x = x.view(x.size(0), -1)
-        x = self.hidden(x)
-        x = self.dropout(x)
-        x = self.fc(x)
-        if self.out_dim == 2:
-            return torch.sigmoid(x)
-        else:
-            return torch.softmax(x, -1)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x = torch.randn((32, 1, 150, 150)).to(device)
-    model = Resnet50("test").to(device)
+    model = Resnet("test", bottlenecks=[3, 4, 6, 3]).to(device)
     out = model(x)

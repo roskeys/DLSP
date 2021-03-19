@@ -359,7 +359,7 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
         start_time = time.time()
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
-            if model.name == "covid_classifier":
+            if "covid_classifier" in model.name:
                 (images, labels) = process_y(images, labels) if process_y else (images, labels)
             else:
                 labels = process_y(labels) if process_y else labels
