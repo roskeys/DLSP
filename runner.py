@@ -55,6 +55,7 @@ parser.add_argument("--test-augmentation", type=int, default=0, help="Augmentati
 parser.add_argument("--show_dataset_distribution", type=lambda x: (str(x).lower() == 'true'), default=False)
 parser.add_argument("--predict", type=str, help="Make prediction on new image")
 parser.add_argument("--debug", type=lambda x: (str(x).lower() == 'true'), default=False)
+parser.add_argument("--best_only", type=lambda x: (str(x).lower() == 'true'), default=True)
 args = parser.parse_args()
 
 if args.model == 1:
@@ -75,9 +76,9 @@ else:
 train_set = Lung_Dataset("train", base_dir=args.data_dir)
 test_set = Lung_Dataset("test", base_dir=args.data_dir)
 val_set1 = Lung_Dataset("val", base_dir=args.data_dir)
-val_set2 = Lung_Dataset("val", base_dir=args.data_dir, transform=1, contrast=1, brightness=1)
-val_set3 = Lung_Dataset("val", base_dir=args.data_dir, transform=2, contrast=1, brightness=1)
-val_set4 = Lung_Dataset("val", base_dir=args.data_dir, transform=4, contrast=1, brightness=1)
+val_set2 = Lung_Dataset("val", base_dir=args.data_dir, transform=1)
+val_set3 = Lung_Dataset("val", base_dir=args.data_dir, transform=2, contrast=30, brightness=30)
+val_set4 = Lung_Dataset("val", base_dir=args.data_dir, transform=4, contrast=30, brightness=30)
 val_set = AugmentedDataset(val_set1, val_set2, val_set3, val_set4)
 
 if args.train:
@@ -90,7 +91,7 @@ if args.train:
         train_model(model, train_loader, val_loader, loss_function=loss_func, process_y=preprocess_for_y,
                     epochs=args.epochs, cuda=args.gpu, optimizer_class=Adam, lr=args.lr, weight_decay=args.C,
                     save_path=args.save_dir, print_every=args.print_every, save_every=args.save_every, logger=logger,
-                    debug=args.debug)
+                    debug=args.debug, best_only=args.best_only)
     except KeyboardInterrupt:
         print("Waiting to exit...")
     finally:

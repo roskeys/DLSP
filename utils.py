@@ -1,5 +1,6 @@
 import os
 import time
+from random import random
 
 import torch
 import torch.nn as nn
@@ -121,8 +122,8 @@ class Lung_Dataset(Dataset):
         }
         # Define Data Augmentation
         self.transform = int(transform)
-        self.contrast = max(0, min(contrast, 2))
-        self.brightness = max(0, min(brightness, 2))
+        self.contrast = contrast  # max(0, min(contrast, 2))
+        self.brightness = brightness  # max(0, min(brightness, 2))
 
     def _transform(self, im):
         """
@@ -135,9 +136,9 @@ class Lung_Dataset(Dataset):
             if self.transform & 1:
                 im = transforms.RandomHorizontalFlip()(im)
             if self.transform & 2:
-                im = transforms.ColorJitter(contrast=self.contrast)(im)
+                im = transforms.ColorJitter(contrast=random() * self.contrast)(im)
             if self.transform & 4:
-                im = transforms.ColorJitter(brightness=self.brightness)(im)
+                im = transforms.ColorJitter(brightness=random() * self.brightness)(im)
         return im
 
     def describe(self):
@@ -340,7 +341,7 @@ def plot_accuracy(train_accuracy, val_accuracy, name):
 
 def train_model(model, train_loader, val_loader, loss_function=None, process_y=None, epochs=1,
                 optimizer_class=None, lr=0.001, weight_decay=0.001, save_path="saved_models", cuda=True,
-                print_every=1, save_every=1, logger=None, debug=False):
+                print_every=1, save_every=1, logger=None, debug=False, best_only=True):
     logger.info(f"Start training {model.name}")
     device = torch.device("cuda" if torch.cuda.is_available() and cuda else "cpu")
     model = model.to(device)
@@ -348,6 +349,8 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
     training_loss_list, val_loss_list = [], []
     training_acc_list, val_acc_list = [], []
     step_loss_list = []
+    best_acc = 0
+    lowest_loss = 10000
     for e in range(1, epochs + 1):
         total_loss = 0
         step = 0
@@ -401,7 +404,10 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
             plot_loss(training_loss_list, val_loss_list, model.name)
             plot_accuracy(training_acc_list, val_acc_list, model.name)
             plot_step_loss(step_loss_list, model.name)
-        if e % save_every == 0:
+        if best_only:
+            if val_loss < lowest_loss or best_acc > acc:
+                torch.save(model, os.path.join(save_path, model.name + f"_model.h5"))
+        elif e % save_every == 0:
             torch.save(model, os.path.join(save_path, model.name + f"_model-{e}.h5"))
 
 
