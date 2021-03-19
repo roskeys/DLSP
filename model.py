@@ -115,6 +115,15 @@ class Resnet50(nn.Module):
         else:
             return torch.softmax(x, -1)
 
+class Resnet101(nn.Module):
+    def __init__(self):
+        # TODO: SHIJIE
+        pass
+
+class Resnet152(nn.Module):
+    def __init__(self):
+        # TODO: LICHENG
+        pass
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
