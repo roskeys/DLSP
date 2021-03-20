@@ -111,7 +111,7 @@ if args.test:
 
     if model is None:
         if not (args.model_path and os.path.exists(args.model_path)):
-            args.model_path = os.path.join(args.save_dir, os.listdir(args.save_dir)[-1])
+            raise FileNotFoundError("Please specify a model to test")
         else:
             model = torch.load(args.model_path)
     if "three_class" in model.name:
