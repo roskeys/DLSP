@@ -109,7 +109,7 @@ if args.train:
 if args.test:
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True)
 
-    if not model:
+    if model is None:
         if not (args.model_path and os.path.exists(args.model_path)):
             args.model_path = os.path.join(args.save_dir, os.listdir(args.save_dir)[-1])
         else:
