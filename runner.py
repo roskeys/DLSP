@@ -56,7 +56,7 @@ parser.add_argument("--predict", type=str, help="Make prediction on new image")
 parser.add_argument("--debug", type=lambda x: (str(x).lower() == 'true'), default=False)
 parser.add_argument("--best_only", type=lambda x: (str(x).lower() == 'true'), default=True)
 args = parser.parse_args()
-
+# Validate loss:18.181 Accuracy: 68.0% Precision: 0.680 Recall: 1.000 f1score: 0.81
 if args.classifier == 1:
     name = "three_class"
     loss_func = nn.CrossEntropyLoss()
@@ -93,7 +93,7 @@ if args.train:
                    out_dim=2 if args.classifier > 1 else 3,
                    bottlenecks=bottlenecks)
     if args.show_dataset_distribution:
-        dataset_distribution(train_set, test_set, val_set)
+        dataset_distribution(train_set, test_set, val_set1)
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=True)
     try:
@@ -131,7 +131,3 @@ if args.test:
                                                                loss_func=loss_func)
     logger.info(
         f"{model.name} Test loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score:.3f}")
-
-if args.predict:
-    # TODO load image and make prediction, print out the category in string
-    pass

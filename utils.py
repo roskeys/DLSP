@@ -13,6 +13,8 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from evaluate import eval
 
+label_dict = {0: "normal", 1: "non-covid", 2: "covid"}
+
 
 class AugmentedDataset(Dataset):
     def __init__(self, *datasets):
@@ -22,13 +24,14 @@ class AugmentedDataset(Dataset):
         # All images are of size 150 x 150
         self.img_size = (150, 150)
         self.dataset_numbers = {
-            f"{dataset.groups}_{dataset.transform}_{dataset.contrast}_{dataset.brightness}": len(dataset)
+            f"{dataset.groups}_{dataset.transform}": len(dataset)
             for dataset in datasets
         }
         self.classes = {
-            f"{dataset.groups}_{dataset.transform}_{dataset.contrast}_{dataset.brightness}": dataset
+            f"{dataset.groups}_{dataset.transform}": dataset
             for dataset in datasets
         }
+        self.groups = datasets[0].groups
 
     def describe(self):
         """
@@ -45,7 +48,7 @@ class AugmentedDataset(Dataset):
         msg += "and each one contains the following number of images:\n"
         print(msg)
 
-    def open_img(self, group_val, transform_val, contrast_val, brightness_val, index_val):
+    def open_img(self, group_val, transform_val, index_val):
         """
         Opens image with specified parameters.
         Parameters:
@@ -53,12 +56,12 @@ class AugmentedDataset(Dataset):
         - index_val should be an integer with values between 0 and the maximal number of images in dataset.
         Returns loaded image as a normalized Numpy array.
         """
-        dataset_name = f"{group_val}_{transform_val}_{contrast_val}_{brightness_val}"
+        dataset_name = f"{group_val}_{transform_val}"
         dataset = self.classes[dataset_name]
         assert index_val < self.dataset_numbers[dataset_name]
         return dataset[index_val][0]
 
-    def show_img(self, group_val, transform_val, contrast_val, brightness_val, index_val):
+    def show_img(self, group_val, transform_val, index_val):
         """
         Opens, then displays image with specified parameters.
 
@@ -68,7 +71,7 @@ class AugmentedDataset(Dataset):
         - index_val should be an integer with values between 0 and the maximal number of images in dataset.
         """
         # Open image
-        im = self.open_img(group_val, transform_val, contrast_val, brightness_val, index_val)
+        im = self.open_img(group_val, transform_val, index_val)
         # Display
         plt.imshow(im.permute(1, 2, 0))
 
@@ -110,9 +113,9 @@ class Lung_Dataset(Dataset):
 
         # Path to images for different parts of the dataset
         self.dataset_paths = {
-            'normal': f'./{base_dir}/{groups}/normal/',
-            'non-covid': f'./{base_dir}/{groups}/infected/non-covid/',
-            'covid': f'./{base_dir}/{groups}/infected/covid/'
+            'normal': f'{base_dir}/{groups}/normal/',
+            'non-covid': f'{base_dir}/{groups}/infected/non-covid/',
+            'covid': f'{base_dir}/{groups}/infected/covid/'
         }
         # Number of images in each part of the dataset
         self.dataset_numbers = {
@@ -411,6 +414,48 @@ def train_model(model, train_loader, val_loader, loss_function=None, process_y=N
             torch.save(model, os.path.join(save_path, model.name + f"_model-{e}.h5"))
 
 
+def load_and_transform_image(path):
+    with open(path, 'rb') as f:
+        im = np.asarray(Image.open(f))
+        im = transforms.functional.to_tensor(np.array(im) / 255.).float()
+    return im.unsqueeze(0)
+
+
+def make_prediction(image, *models):
+    if len(models) == 1:
+        output = models[0](image)
+        predictions = torch.argmax(output, dim=1)
+        result = []
+        for pred in predictions:
+            result.append(label_dict[pred.item()])
+        return result
+    elif len(models) == 2:
+        covid_model, infected_model = None, None
+        for model in models:
+            if "infected_classifier" in model.name:
+                infected_model = model
+            elif "covid_classifier" in model.name:
+                covid_model = model
+            else:
+                raise Exception("Cannot find required models")
+        output1 = infected_model(image).round()
+        output2 = covid_model(image).round()
+        predictions = []
+        for index, pred in enumerate(output1):
+            if pred < 0.5:
+                predictions.append(label_dict[0])
+            else:
+                if output2[index] < 0.5:
+                    predictions.append(label_dict[1])
+                else:
+                    predictions.append(label_dict[2])
+        return predictions
+
+
+    else:
+        raise NotImplementedError("The make prediction function for more than 2 models are not implemented")
+
+
 if __name__ == '__main__':
     train_set = Lung_Dataset("train")
     train_set0 = Lung_Dataset("train", transform=1)
@@ -420,7 +465,7 @@ if __name__ == '__main__':
     val_set = Lung_Dataset("val")
     # dataset_distribution(train_set, test_set, val_set)
     augmented_set = AugmentedDataset(train_set, train_set0, train_set2, train_set1)
-    augmented_set.show_img(group_val="train", transform_val=2, contrast_val=1, brightness_val=1, index_val=1)
+    augmented_set.show_img(group_val="train", transform_val=2, index_val=1)
     train_set.show_img(class_val='non-covid', index_val=50)
     from model import Resnet50
 
@@ -446,6 +491,11 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=64, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=64, shuffle=True)
+
+    model1 = Resnet50(name="infected_classifier", hidden_dim=1024, out_dim=2)
+    model2 = Resnet50(name="covid_classifier", hidden_dim=1024, out_dim=2)
+    for image, label in val_loader:
+        print(make_prediction(image, model1, model2))
 
     train_model(Resnet50(name="infected_classifier", hidden_dim=1024, out_dim=2), train_loader, val_loader,
                 loss_function=nn.BCELoss(), process_y=get_normal_and_infected, epochs=3, optimizer_class=Adam,
