@@ -79,7 +79,7 @@ val_set2 = Lung_Dataset("val", base_dir=args.data_dir, transform=1)
 val_set3 = Lung_Dataset("val", base_dir=args.data_dir, transform=2, contrast=30, brightness=30)
 val_set4 = Lung_Dataset("val", base_dir=args.data_dir, transform=4, contrast=30, brightness=30)
 val_set = AugmentedDataset(val_set1, val_set2, val_set3, val_set4)
-
+model = None
 if args.train:
     if args.resnet == 50:
         bottlenecks = [3, 4, 6, 3]
@@ -89,7 +89,8 @@ if args.train:
         bottlenecks = [3, 8, 36, 3]
     else:
         raise NotImplementedError("The resnet model is not implemented here")
-    model = Resnet(name=name + "_" + str(args.resnet), hidden_dim=args.hidden_units, out_dim=2 if args.classifier > 1 else 3,
+    model = Resnet(name=name + "_" + str(args.resnet), hidden_dim=args.hidden_units,
+                   out_dim=2 if args.classifier > 1 else 3,
                    bottlenecks=bottlenecks)
     if args.show_dataset_distribution:
         dataset_distribution(train_set, test_set, val_set)
@@ -107,9 +108,12 @@ if args.train:
 
 if args.test:
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True)
-    if not (args.model_path and os.path.exists(args.model_path)):
-        args.model_path = os.path.join(args.save_dir, os.listdir(args.save_dir)[-1])
-    model = torch.load(args.model_path)
+
+    if not model:
+        if not (args.model_path and os.path.exists(args.model_path)):
+            args.model_path = os.path.join(args.save_dir, os.listdir(args.save_dir)[-1])
+        else:
+            model = torch.load(args.model_path)
     if "three_class" in model.name:
         loss_func = nn.CrossEntropyLoss()
         preprocess_for_y = three_class_preprocessing
@@ -126,7 +130,7 @@ if args.test:
                                                                convert_func=preprocess_for_y, device=device,
                                                                loss_func=loss_func)
     logger.info(
-        f"{args.model_path} Test loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score:.3f}")
+        f"{model.name} Test loss:{val_loss:.3f} Accuracy: {acc * 100:.1f}% Precision: {precision:.3f} Recall: {recall:.3f} f1score: {f1score:.3f}")
 
 if args.predict:
     # TODO load image and make prediction, print out the category in string
