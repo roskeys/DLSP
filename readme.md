@@ -52,3 +52,55 @@ The `--show_dataset_distribution` option allows user to see the training set siz
 The `--debug` option enters debug mode, in which for each epoch, the model will only train one batch of examples
 
 The `--best_only` option will save the best model if the validation loss drops or the validation accuracy increases
+
+## run the code
+To train a ResNet 101 model from scratch, simply use:
+```bash
+python runner.py --classifier 2 --epochs=500 --print_every 1 --batch_size 64 --save_every 10 --gpu true --resnet 101
+```
+
+To test a saved model on the test set:
+```bash
+python runner.py --train false --test true --model_path saved_models\covid_classifier_101_model.h5
+```
+
+## File structure
+```bash
+.
+├── dataset
+│ ├── test
+│ │ ├── infected
+│ │ │ ├── covid
+│ │ │ └── non-covid
+│ │ └── normal
+│ ├── train
+│ │ ├── infected
+│ │ │ ├── covid
+│ │ │ └── non-covid
+│ │ └── normal
+│ └── val
+│     ├── infected
+│     │ ├── covid
+│     │ └── non-covid
+│     └── normal
+├── dataset_demo
+│ ├── test
+│ │ ├── infected
+│ │ └── normal
+│ ├── train
+│ │ ├── infected
+│ │ └── normal
+│ └── val
+│     ├── infected
+│     └── normal
+├── DL small project.ipynb
+├── evaluate.py
+├── logs
+├── model.py
+├── plots
+├── readme.md
+├── runner.py
+├── saved_models
+├── Small_Project_instructions.pdf
+└── utils.py
+```
