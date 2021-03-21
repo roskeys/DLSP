@@ -13,6 +13,49 @@ pip install matplotlib
 pip install sklearn
 pip install torch==1.4.0 torchvision==0.5.0
 ```
+
+## File structure
+We assume you have extracted the dataset and have the following file structure:
+```bash
+.
+├── dataset
+│ ├── test
+│ │ ├── infected
+│ │ │ ├── covid
+│ │ │ └── non-covid
+│ │ └── normal
+│ ├── train
+│ │ ├── infected
+│ │ │ ├── covid
+│ │ │ └── non-covid
+│ │ └── normal
+│ └── val
+│     ├── infected
+│     │ ├── covid
+│     │ └── non-covid
+│     └── normal
+├── dataset_demo
+│ ├── test
+│ │ ├── infected
+│ │ └── normal
+│ ├── train
+│ │ ├── infected
+│ │ └── normal
+│ └── val
+│     ├── infected
+│     └── normal
+├── DL small project.ipynb
+├── evaluate.py
+├── logs
+├── model.py
+├── plots
+├── readme.md
+├── runner.py
+├── saved_models
+├── Small_Project_instructions.pdf
+└── utils.py
+```
+
 ## Run the model
 The `--classifier` option specifies the model category, which takes an integer value.
     1. three class model
@@ -64,43 +107,7 @@ To test a saved model on the test set:
 python runner.py --train false --test true --model_path saved_models\covid_classifier_101_model.h5
 ```
 
-## File structure
+In order to reproduce all the results, please run test.sh
 ```bash
-.
-├── dataset
-│ ├── test
-│ │ ├── infected
-│ │ │ ├── covid
-│ │ │ └── non-covid
-│ │ └── normal
-│ ├── train
-│ │ ├── infected
-│ │ │ ├── covid
-│ │ │ └── non-covid
-│ │ └── normal
-│ └── val
-│     ├── infected
-│     │ ├── covid
-│     │ └── non-covid
-│     └── normal
-├── dataset_demo
-│ ├── test
-│ │ ├── infected
-│ │ └── normal
-│ ├── train
-│ │ ├── infected
-│ │ └── normal
-│ └── val
-│     ├── infected
-│     └── normal
-├── DL small project.ipynb
-├── evaluate.py
-├── logs
-├── model.py
-├── plots
-├── readme.md
-├── runner.py
-├── saved_models
-├── Small_Project_instructions.pdf
-└── utils.py
+bash ./test.sh
 ```
