@@ -52,7 +52,6 @@ parser.add_argument("--train", type=lambda x: (str(x).lower() == 'true'), defaul
 parser.add_argument("--test", type=lambda x: (str(x).lower() == 'true'), default=True, help="Test the selected model")
 parser.add_argument("--model_path", type=str, default=None, help="The model used to evaluate and test")
 parser.add_argument("--show_dataset_distribution", type=lambda x: (str(x).lower() == 'true'), default=False)
-parser.add_argument("--predict", type=str, help="Make prediction on new image")
 parser.add_argument("--debug", type=lambda x: (str(x).lower() == 'true'), default=False)
 parser.add_argument("--best_only", type=lambda x: (str(x).lower() == 'true'), default=True)
 args = parser.parse_args()
