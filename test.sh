@@ -27,7 +27,7 @@ python runner.py --train false --test true --model_path saved_models/covid_class
 
 ### ResNet 152
 ## Three classes
-wget wget https://downloads.roskey.net/models/three_class_152_model.h5 -P saved_models
+wget https://downloads.roskey.net/models/three_class_152_model.h5 -P saved_models
 python runner.py --train false --test true --model_path saved_models/three_class_152_model.h5
 
 ## Infected-Normal
