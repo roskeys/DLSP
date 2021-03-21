@@ -104,10 +104,10 @@ python runner.py --classifier 2 --epochs=500 --print_every 1 --batch_size 64 --s
 
 To test a saved model on the test set:
 ```bash
-python runner.py --train false --test true --model_path saved_models\covid_classifier_101_model.h5
+python runner.py --train false --test true --model_path saved_models/covid_classifier_101_model.h5
 ```
 
 In order to reproduce all the results, please run test.sh
 ```bash
-bash ./test.sh
+bash test.sh
 ```
