@@ -73,7 +73,7 @@ class AugmentedDataset(Dataset):
         # Open image
         im = self.open_img(group_val, transform_val, index_val)
         # Display
-        plt.imshow(im.permute(1, 2, 0))
+        plt.imshow(im.permute(1, 2, 0).squeeze(-1))
 
     def __len__(self):
         """
